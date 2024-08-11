@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packet Capture GUI</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Packet Capture</h1>
+    <div id="controls">
+        <button id="startButton">Start Capture</button>
+        <button id="stopButton" disabled>Stop Capture</button>
+    </div>
+    <div id="status">Status: Not Capturing</div>
+    <div id="packets"></div>
+
+    <script>
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDiv = document.getElementById('status');
+        const packetsDiv = document.getElementById('packets');
+        let ws;
+
+        startButton.addEventListener('click', () => {
+            fetch('/start-capture')
+                .then(response => response.text())
+                .then(data => {
+                    statusDiv.textContent = "Status: " + data;
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+
+                    ws = new WebSocket('ws://' + window.location.host + '/ws');
+                    ws.onmessage = function(event) {
+                        const message = document.createElement('div');
+                        message.textContent = event.data;
+                        packetsDiv.appendChild(message);
+                        packetsDiv.scrollTop = packetsDiv.scrollHeight; // Scroll to the bottom
+                    };
+                    ws.onclose = () => {
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+                    };
+                })
+                .catch(err => {
+                    alert('Error: ' + err);
+                });
+        });
+
+        stopButton.addEventListener('click', () => {
+            fetch('/stop-capture')
+                .then(response => response.text())
+                .then(data => {
+                    statusDiv.textContent = "Status: " + data;
+                    if (ws) {
+                        ws.close();
+                    }
+                })
+                .catch(err => {
+                    alert('Error: ' + err);
+                });
+        });
+    </script>
+</body>
+</html>
